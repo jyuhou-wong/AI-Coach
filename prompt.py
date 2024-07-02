@@ -108,7 +108,7 @@ Action:
 1. Generate 3 projects based on the keywords in the job description. Here is an example output:
 
 {
-  "projects": [
+  "genprojects": [
     {
       "name": "Inventory Management System",
       "technologies": ["Python", "Django"],

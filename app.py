@@ -99,8 +99,8 @@ def analyze_resume(resume_text):
     response = chain.invoke({'query': 'given resume_text:\n' + resume_text + '\n' + analyze_resume_prompt})
     return response
 
-def update_section(section_name, original_data, update_prompt, pydantic_object, data_to_string_func):
-    if section_name != 'Generate Projects':
+def update_section(section_name, original_data, update_prompt, pydantic_object, data_to_string_func, tab_index):
+    if section_name != 'Genprojects':
         st.subheader(f'Original {section_name}', divider='rainbow')
         original_data_str = data_to_string_func(original_data)
         st.text(original_data_str)
@@ -111,6 +111,7 @@ def update_section(section_name, original_data, update_prompt, pydantic_object, 
     prompt_text = st.text_area('You can update the prompt based on your requirements', update_prompt, height=300)
 
     if st.button(f'Update {section_name}', use_container_width=True):
+        st.session_state.active_tab = tab_index  # Set the active tab in the session state
         if not st.session_state.get('openai_api_key'):
             st.error('Please enter your OpenAI API key.')
             return
@@ -222,7 +223,7 @@ if st.session_state.resume_analyzed:
         ('Skills', 'skills', update_skill_prompt, Skill, skills_dict_to_string),
         ('Experiences', 'experiences', update_experience_prompt, Experience, experiences_list_to_string),
         ('Projects', 'projects', update_project_prompt, Project, projects_list_to_string),
-        ('Generate Projects', None, generate_project_prompt, Project, None)
+        ('Genprojects', None, generate_project_prompt, Project, None)
     ]
 
     for i, (section_name, section_key, update_prompt, pydantic_object, data_to_string_func) in enumerate(tab_details):
@@ -231,7 +232,7 @@ if st.session_state.resume_analyzed:
                 st.session_state.active_tab = i
             resume_response = st.session_state.resume_response
             original_data = resume_response.get(section_key, {}) if section_key else {}
-            update_section(section_name, original_data, update_prompt, pydantic_object, data_to_string_func)
+            update_section(section_name, original_data, update_prompt, pydantic_object, data_to_string_func, i)
             display_results(section_name)
 else:
     st.info('Please analyze your resume first to enable the tabs.')
