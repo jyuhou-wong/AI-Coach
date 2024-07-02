@@ -127,7 +127,6 @@ def update_section(section_name, original_data, update_prompt, pydantic_object, 
                 # Store results in session state
                 st.session_state[f'{section_name.lower()}_new_data'] = new_data_str
                 st.session_state[f'{section_name.lower()}_highlighted_data'] = highlighted_data
-                display_results(section_name)
 
 
 def display_results(section_name):
@@ -228,6 +227,7 @@ if st.session_state.resume_analyzed:
             resume_response = st.session_state.resume_response
             original_data = resume_response.get(section_key, {})
             update_section(section_name, original_data, update_prompt, pydantic_object, data_to_string_func)
+            display_results(section_name)
 
     with tabs[3]:
         if active_tab == 3:
