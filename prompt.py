@@ -7,13 +7,13 @@ Action:
 
 Output format:
 {
-  "skill": {
+  "skills": {
     "Programming Languages": ["Java", "Python"],
     "Frameworks and Tools": ["Spring", "Kubernetes"],
     "Databases": ["MySQL"],
     "Cloud services": ["AWS EC2", "AWS S3"]
   },
-  "experience": [
+  "experiences": [
     {
       "company": "ABC Corp",
       "role": "Software Developer",
@@ -45,10 +45,77 @@ Action:
 1. Update the tech skill in the resume based on the keywords in the job description, here is an example output:
 
 {
-  "skill": {
+  "skills": {
     "Programming Languages": ["Java", "Python"],
     "Frameworks and Tools": ["Spring", "Kubernetes"],
     "Databases": ["MySQL"],
     "Cloud services": ["AWS EC2", "AWS S3"]
   }
+"""
+
+update_experience_prompt = """requirements:
+1. Format the output as JSON objects for each work experience with company name, role, and details.
+2. Do not add extra experience, try to use the keyword in job description.
+3. Professional and concise style use normal english, do not change the word if they have the same or similar meaning
+4. 5 bullet point, every bullet point should include at least one tech skill
+
+Action:
+1. Update the details in original work experience in the resume to match the requirements in job description. Here is an example output:
+
+{
+  "experiences": [
+    {
+      "company": "ABC Corp",
+      "role": "Software Developer",
+      "details": [
+        "Implemented a Vite-based build system using Django and React, reducing build times by 40% and improving overall application performance.",
+      ]
+    }
+  ]
+}
+"""
+
+update_project_prompt = """requirements:
+1. Format the output as JSON objects for each project with project name, technologies used, and details.
+5. Professional and concise style use normal english, with 5 bullet point, every bullet point should include at least one tech skill
+6. Add example numbers and metrics in the experience and projects like reducing 50% API request time to make it more impressive
+
+Action:
+1. Update the details in original projects in the resume to match the requirements in job description. Here is an example output:
+
+{
+  "projects": [
+    {
+      "name": "Inventory Management System",
+      "technologies": ["Python", "Django"],
+      "details": [
+        "Implemented a Vite-based build system using Django and React, reducing build times by 40% and improving overall application performance.",
+      ]
+    }
+  ]
+}
+"""
+
+generate_project_prompt = """requirements:
+1. Format the output as JSON objects for each project with project name, technologies used, and details.
+2. Do not include a project if it has no details.
+3. These projects should have a certain degree of differentiation, and each can meet the specific requirements of the position requirements.
+4. The Project name should be creative not too common, use tech stack list in the job description
+5. Professional and concise style use normal english, with 5 bullet point (no less than 15 words), every bullet point should include at least one tech skill
+6. Add example numbers and metrics in the experience and projects like reducing 50% API request time to make it more impressive
+
+Action:
+1. Generate 3 project based on the keywords in the job description. Here is an example output:
+
+{
+  "projects": [
+    {
+      "name": "Inventory Management System",
+      "technologies": ["Python", "Django"],
+      "details": [
+        "Implemented a Vite-based build system using Django and React, reducing build times by 40% and improving overall application performance.",
+      ]
+    }
+  ]
+}
 """
