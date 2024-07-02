@@ -93,7 +93,7 @@ def analyze_resume(resume_text):
         input_variables=['query'],
         partial_variables={'format_instructions': parser.get_format_instructions()},
     )
-    chain = LLMChain(prompt=prompt, llm=model, output_parser=parser)
+    chain = prompt | model | parser
     response = chain.invoke({'query': 'given resume_text:\n' + resume_text + '\n' + analyze_resume_prompt})
     return response
 
@@ -117,7 +117,7 @@ def update_section(section_name, original_data, update_prompt, pydantic_object, 
                 input_variables=['query'],
                 partial_variables={'format_instructions': parser.get_format_instructions()},
             )
-            chain = LLMChain(prompt=prompt, llm=model, output_parser=parser)
+            chain = prompt | model | parser
             response = chain.invoke(
                 {'query': f'given original {section_name.lower()}:\n' + original_data_str + '\nand job description:\n' + st.session_state.job_description + '\n' + prompt_text})
             if response:
@@ -158,7 +158,7 @@ def invoke_chain(query, pydantic_object):
         input_variables=['query'],
         partial_variables={'format_instructions': parser.get_format_instructions()},
     )
-    chain = LLMChain(prompt=prompt, llm=model, output_parser=parser)
+    chain = prompt | model | parser
     return chain.invoke({'query': query})
 
 with st.sidebar:
