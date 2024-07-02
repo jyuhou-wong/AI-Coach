@@ -10,7 +10,6 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.pydantic_v1 import BaseModel, Field
 from prompt import analyze_resume_prompt, update_skill_prompt, update_experience_prompt, update_project_prompt, generate_project_prompt
 
-model = ChatOpenAI(model='gpt-4o')
 st.set_page_config(layout="wide")
 
 class Resume(BaseModel):
@@ -153,6 +152,7 @@ def invoke_chain(query, pydantic_object):
 with st.sidebar:
     openai_api_key = st.text_input('OpenAI API Key', key='chatbot_api_key', type='password')
     '[Get an OpenAI API key](https://platform.openai.com/account/api-keys)'
+    model = ChatOpenAI(model='gpt-4o', openai_api_key=openai_api_key, streaming=True)
 
 st.header('AI Coach: Resume customization', divider='violet')
 st.caption('created by Education Victory')
