@@ -79,21 +79,23 @@ def projects_list_to_string(projects_list):
     return projects_str.strip()
 
 def analyze_resume(resume_text):
-    if not openai_api_key:
+    if not st.session_state.get('openai_api_key'):
         st.error('Please enter your OpenAI API key.')
-    elif not resume_text:
+        return
+    if not resume_text:
         st.error('Please provide your resume.')
-    else:
-        parser = JsonOutputParser(pydantic_object=Resume)
-        prompt = PromptTemplate(
-            template='{format_instructions}\n{query}\n',
-            input_variables=['query'],
-            partial_variables={'format_instructions': parser.get_format_instructions()},
-        )
-        chain = prompt | model | parser
-        response = chain.invoke(
-            {'query': 'given resume_text:\n' + resume_text + '\n' + analyze_resume_prompt})
-        return response
+        return
+
+    model = ChatOpenAI(model_name='gpt-4', openai_api_key=st.session_state.openai_api_key, streaming=True)
+    parser = JsonOutputParser(pydantic_object=Resume)
+    prompt = PromptTemplate(
+        template='{format_instructions}\n{query}\n',
+        input_variables=['query'],
+        partial_variables={'format_instructions': parser.get_format_instructions()},
+    )
+    chain = LLMChain(prompt=prompt, llm=model, output_parser=parser)
+    response = chain.invoke({'query': 'given resume_text:\n' + resume_text + '\n' + analyze_resume_prompt})
+    return response
 
 def update_section(section_name, original_data, update_prompt, pydantic_object, data_to_string_func):
     st.subheader(f'Original {section_name}', divider='rainbow')
@@ -103,14 +105,19 @@ def update_section(section_name, original_data, update_prompt, pydantic_object, 
     prompt_text = st.text_area('You can update the prompt based on your requirements', update_prompt, height=300)
 
     if st.button(f'Update {section_name}', use_container_width=True):
+        if not st.session_state.get('openai_api_key'):
+            st.error('Please enter your OpenAI API key.')
+            return
+
         with st.spinner(f'Updating {section_name} based on job description...'):
+            model = ChatOpenAI(model_name='gpt-4', openai_api_key=st.session_state.openai_api_key, streaming=True)
             parser = JsonOutputParser(pydantic_object=pydantic_object)
             prompt = PromptTemplate(
                 template='{format_instructions}\n{query}\n',
                 input_variables=['query'],
                 partial_variables={'format_instructions': parser.get_format_instructions()},
             )
-            chain = prompt | model | parser
+            chain = LLMChain(prompt=prompt, llm=model, output_parser=parser)
             response = chain.invoke(
                 {'query': f'given original {section_name.lower()}:\n' + original_data_str + '\nand job description:\n' + st.session_state.job_description + '\n' + prompt_text})
             if response:
@@ -140,19 +147,24 @@ def display_results(section_name):
 
 
 def invoke_chain(query, pydantic_object):
+    if not st.session_state.get('openai_api_key'):
+        st.error('Please enter your OpenAI API key.')
+        return
+
+    model = ChatOpenAI(model_name='gpt-4', openai_api_key=st.session_state.openai_api_key, streaming=True)
     parser = JsonOutputParser(pydantic_object=pydantic_object)
     prompt = PromptTemplate(
         template='{format_instructions}\n{query}\n',
         input_variables=['query'],
         partial_variables={'format_instructions': parser.get_format_instructions()},
     )
-    chain = prompt | model | parser
+    chain = LLMChain(prompt=prompt, llm=model, output_parser=parser)
     return chain.invoke({'query': query})
 
 with st.sidebar:
-    openai_api_key = st.text_input('OpenAI API Key', key='chatbot_api_key', type='password')
-    '[Get an OpenAI API key](https://platform.openai.com/account/api-keys)'
-    model = ChatOpenAI(model='gpt-4o', openai_api_key=openai_api_key, streaming=True)
+    openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
+    "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
+    st.session_state.openai_api_key = openai_api_key
 
 st.header('AI Coach: Resume customization', divider='violet')
 st.caption('created by Education Victory')
