@@ -100,9 +100,13 @@ def analyze_resume(resume_text):
     return response
 
 def update_section(section_name, original_data, update_prompt, pydantic_object, data_to_string_func):
-    st.subheader(f'Original {section_name}', divider='rainbow')
-    original_data_str = data_to_string_func(original_data)
-    st.text(original_data_str)
+    if section_name != 'Generate Projects':
+        st.subheader(f'Original {section_name}', divider='rainbow')
+        original_data_str = data_to_string_func(original_data)
+        st.text(original_data_str)
+    else:
+        original_data_str = ""
+
     st.subheader('Default Prompt', divider='rainbow')
     prompt_text = st.text_area('You can update the prompt based on your requirements', update_prompt, height=300)
 
@@ -124,12 +128,11 @@ def update_section(section_name, original_data, update_prompt, pydantic_object, 
                 {'query': f'given original {section_name.lower()}:\n' + original_data_str + '\nand job description:\n' + st.session_state.job_description + '\n' + prompt_text})
             if response:
                 new_data = response.get(section_name.lower(), {})
-                new_data_str = data_to_string_func(new_data)
+                new_data_str = data_to_string_func(new_data) if data_to_string_func else projects_list_to_string(new_data)
                 highlighted_data = highlight_changes(original_data_str, new_data_str)
                 # Store results in session state
                 st.session_state[f'{section_name.lower()}_new_data'] = new_data_str
                 st.session_state[f'{section_name.lower()}_highlighted_data'] = highlighted_data
-
 
 def display_results(section_name):
     new_data_key = f'{section_name.lower()}_new_data'
@@ -140,7 +143,6 @@ def display_results(section_name):
         st.subheader(f'New {section_name}', divider='rainbow')
         st.text(st.session_state[new_data_key])
         st.success(f'Update {section_name.lower()} successfully!')
-
 
 def invoke_chain(query, pydantic_object):
     if not st.session_state.get('openai_api_key'):
@@ -219,7 +221,8 @@ if st.session_state.resume_analyzed:
     tab_details = [
         ('Skills', 'skills', update_skill_prompt, Skill, skills_dict_to_string),
         ('Experiences', 'experiences', update_experience_prompt, Experience, experiences_list_to_string),
-        ('Projects', 'projects', update_project_prompt, Project, projects_list_to_string)
+        ('Projects', 'projects', update_project_prompt, Project, projects_list_to_string),
+        ('Generate Projects', None, generate_project_prompt, Project, None)
     ]
 
     for i, (section_name, section_key, update_prompt, pydantic_object, data_to_string_func) in enumerate(tab_details):
@@ -227,25 +230,8 @@ if st.session_state.resume_analyzed:
             if active_tab == i:
                 st.session_state.active_tab = i
             resume_response = st.session_state.resume_response
-            original_data = resume_response.get(section_key, {})
+            original_data = resume_response.get(section_key, {}) if section_key else {}
             update_section(section_name, original_data, update_prompt, pydantic_object, data_to_string_func)
             display_results(section_name)
-
-    with tabs[3]:
-        if active_tab == 3:
-            st.session_state.active_tab = 3
-        st.subheader('Generate Projects', divider='rainbow')
-        st.subheader('Default Prompt', divider='rainbow')
-        prompt_text = st.text_area('You can update the prompt based on your requirements', generate_project_prompt, height=300)
-        if st.button('Generate Projects', use_container_width=True):
-            with st.spinner('Generating projects based on job description...'):
-                response = invoke_chain(
-                    'job description:\n' + st.session_state.job_description + '\n' + generate_project_prompt, Project)
-                if response:
-                    new_projects = response.get('projects', [])
-                    new_projects_str = projects_list_to_string(new_projects)
-                    st.subheader('Generated Projects', divider='rainbow')
-                    st.text(new_projects_str)
-                    st.success('Projects generated successfully!')
 else:
     st.info('Please analyze your resume first to enable the tabs.')
