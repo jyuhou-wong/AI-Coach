@@ -56,7 +56,7 @@ Action:
 update_experience_prompt = """requirements:
 1. Format the output as JSON objects for each work experience with company name, role, and details.
 2. Do not add extra experience, try to use the keyword in the job description.
-3. Professional and concise style use normal English, with 5 bullet points (no less than 15 words), every bullet point should include at least one tech skill
+3. Professional and concise style use normal English, with 5 bullet points (between 15 to 20 words), every bullet point should include at least one tech skill
 4. Do not change the words if they have the same or similar meaning
 
 Action:
@@ -77,7 +77,7 @@ Action:
 
 update_project_prompt = """requirements:
 1. Format the output as JSON objects for each project with the project name, technologies used, and details.
-2. Professional and concise style use normal English, with 5 bullet points (no less than 15 words), every bullet point should include at least one tech skill
+2. Professional and concise style use normal English, with 5 bullet points (between 15 to 20 words), every bullet point should include at least one tech skill
 3. Add example numbers and metrics in the experience and projects like reducing 50% API request time to make it more impressive
 
 Action:
@@ -101,7 +101,7 @@ generate_project_prompt = """requirements:
 2. Do not include a project if it has no details.
 3. These projects should have a certain degree of differentiation, and each can meet the specific requirements of the position requirements.
 4. The Project name should be creative and not too common, use the tech stack list in the job description
-5. Professional and concise style use normal English, with 5 bullet points (no less than 15 words), every bullet point should include at least one tech skill
+5. Professional and concise style use normal English, with 5 bullet points (between 15 to 20 words), every bullet point should include at least one tech skill
 6. Add example numbers and metrics in the experience and projects like reducing 50% API request time to make it more impressive
 
 Action:

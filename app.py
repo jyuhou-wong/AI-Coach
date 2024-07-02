@@ -49,6 +49,8 @@ def highlight_changes(original, new):
             highlighted += f'<span style="color: green; background-color: #e6ffe6">{line[2:]}</span><br>'
         elif line.startswith('- '):
             highlighted += f'<span style="color: red; background-color: #ffe6e6">{line[2:]}</span><br>'
+        else:
+            highlighted += f'{line[2:]}<br>'
     return highlighted
 
 def skills_dict_to_string(skills_dict):
