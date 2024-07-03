@@ -58,10 +58,9 @@ update_experience_prompt = """Requirements:
 1. Do not add extra experience; use the keywords in the job description.
 2. Use a professional and concise style, with 5 bullet points.
 3. Every bullet point should include at least one tech skill
-4. Every bullet point should be between 20 to 25 words.
-5. Do not change the words if they have the same or similar meaning.
-6. Format the output as JSON objects for each work experience with company name, role, and details.
-7. Ensure each updated bullet point is at least as long as the original bullet point.
+4. Do not change the words if they have the same or similar meaning.
+5. Format the output as JSON objects for each work experience with company name, role, and details.
+6. Ensure each updated bullet point is at least as long as the original bullet point.
 
 Action:
 1. Update the details of the original work experience in the resume to match the requirements in the job description. Here is an example output:
@@ -82,7 +81,7 @@ Action:
 update_project_prompt = """Requirements:
 1. Use a professional and concise style, with 3 bullet points.
 2. Every bullet point should include at least one tech skill
-3. Every bullet point should not shorter than original version and should between 20 to 25 words.
+3. Every bullet point should not shorter than original version
 4. Generate bullet points that describe [your accomplishment or task], using [specific method or technology], and highlight [specific outcome or benefit, including any quantifiable improvements].
 5. Add example numbers and metrics in the experience and projects like reducing 50% API request time to make it more impressive.
 6. Format the output as JSON objects for each project with the project name, technologies used, and details.
@@ -106,7 +105,7 @@ Action:
 
 generate_project_prompt = """Requirements:
 1. Use a professional and concise style.
-2. Every project should have 3 bullet points, each bullet point should include at least one tech skill and be between 15 to 20 words.
+2. Every project should have 3 bullet points, each bullet point should include at least one tech skill.
 3. Generate bullet points that describe [your accomplishment or task], using [specific method or technology], and highlight [specific outcome or benefit, including any quantifiable improvements].
 4. These projects should have a certain degree of differentiation, and each can meet the specific requirements of the position.
 5. The project name should be creative and not too common, using the tech stack list in the job description.

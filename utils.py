@@ -145,7 +145,7 @@ def update_section(section_name, original_data, update_prompt, pydantic_object, 
     st.subheader('Default Prompt', divider='rainbow')
 
     if section_name == 'Genprojects' and 'company_product' in st.session_state:
-        update_prompt = st.session_state['company_product'] + '\n\n' + update_prompt
+        update_prompt = 'Company Product: ' + st.session_state['company_product'] + '\n\n' + update_prompt
 
     prompt_text = st.text_area('You can update the prompt based on your requirements', update_prompt, height=300)
 
