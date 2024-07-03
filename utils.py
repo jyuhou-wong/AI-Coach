@@ -101,16 +101,10 @@ def get_company_product(company_name):
     )
     query = f"Can you provide an overview of the main products and services offered by {company_name}? Please include details about their core features, target audience, and how these products serve the needs of professionals and businesses."
     chain = prompt | model | parser
-    result_container = st.empty()  # Placeholder for streaming response
-    response_text = ""
-    
-    for chunk in chain.invoke({'query': query}):
-        if chunk['choices'][0]['delta'].get('content'):
-            response_text += chunk['choices'][0]['delta']['content']
-            result_container.text(response_text)  # Update placeholder with new content
+    response = chain.invoke({'query': query})
     # Validate JSON response
-    response = json.loads(response_text)  # Convert the final response to JSON
-    if not is_valid_json(response_text):
+    response_str = json.dumps(response)
+    if not is_valid_json(response_str):
         st.error(f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again.")
         return
     return response
@@ -170,25 +164,21 @@ def update_section(section_name, original_data, update_prompt, pydantic_object, 
                 input_variables=['query'],
                 partial_variables={'format_instructions': parser.get_format_instructions()},
             )
-            result_container = st.empty()  # Placeholder for streaming response
-            response_text = ""
             chain = prompt | model | parser
-            for chunk in chain.invoke(
-                {'query': f'given original {section_name.lower()}:\n' + original_data_str + '\nand job description:\n' + st.session_state.job_description + '\n' + prompt_text}):
-                if chunk['choices'][0]['delta'].get('content'):
-                    response_text += chunk['choices'][0]['delta']['content']
-                    result_container.text(response_text)  # Update placeholder with new content
-            
-            response = json.loads(response_text)  # Convert the final response to JSON
-            if not is_valid_json(response_text):
-                st.error(f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again.")
-                return
-            new_data = response.get(section_name.lower(), {})
-            new_data_str = data_to_string_func(new_data) if data_to_string_func else projects_list_to_string(new_data)
-            highlighted_data = highlight_changes(original_data_str, new_data_str)
-            # Store results in session state
-            st.session_state[f'{section_name.lower()}_new_data'] = new_data_str
-            st.session_state[f'{section_name.lower()}_highlighted_data'] = highlighted_data
+            response = chain.invoke(
+                {'query': f'given original {section_name.lower()}:\n' + original_data_str + '\nand job description:\n' + st.session_state.job_description + '\n' + prompt_text})
+            # Validate JSON response
+            if response:
+                response_str = json.dumps(response)
+                if not is_valid_json(response_str):
+                    st.error(f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again.")
+                    return
+                new_data = response.get(section_name.lower(), {})
+                new_data_str = data_to_string_func(new_data) if data_to_string_func else projects_list_to_string(new_data)
+                highlighted_data = highlight_changes(original_data_str, new_data_str)
+                # Store results in session state
+                st.session_state[f'{section_name.lower()}_new_data'] = new_data_str
+                st.session_state[f'{section_name.lower()}_highlighted_data'] = highlighted_data
 
 def display_results(section_name):
     new_data_key = f'{section_name.lower()}_new_data'
