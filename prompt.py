@@ -36,20 +36,21 @@ Output format:
 
 update_skill_prompt = """Requirements:
 1. The updated tech skill should contain no more than 4 sections, which can only be: Programming Languages, Frameworks and Tools, Databases, and Cloud Services (Choose from AWS, GCP, Azure, Oracle Cloud).
-1. Evey section should not have more than 6 skills
-2. Format the output as JSON objects for each tech skill section with sections containing lists of items.
-3. Do not include a section in the output if it has no items.
-4. Do not delete important skills or certifications.
+2. Every section should have 4 to 6 skills
+3. Ensure that all important skills mentioned in the job description are included in the relevant sections.
+4. Format the output as JSON objects for each tech skill section with sections containing lists of items.
+5. Do not include a section in the output if it has no items.
+6. Do not delete important skills or certifications.
 
 Action:
-1. Update the tech skills in the resume based on the keywords in the job description. Here is an example output:
+1. Rewrite the tech skills in the resume based on the requirements in the job description. Here is an example output:
 
 {
   "skills": {
-    "Programming Languages": ["Java", "Python"],
-    "Frameworks and Tools": ["Spring", "Kubernetes"],
-    "Databases": ["MySQL"],
-    "Cloud Services": ["AWS EC2", "AWS S3"]
+    "Programming Languages": ["Java", "Python", ...],
+    "Frameworks and Tools": ["Spring", "Kubernetes", ...],
+    "Databases": ["MySQL", ...],
+    "Cloud Services": ["AWS EC2", "AWS S3", ...]
   }
 }
 """
