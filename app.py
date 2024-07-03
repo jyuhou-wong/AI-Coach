@@ -1,169 +1,17 @@
-import json
 import fitz
 import streamlit as st
-from difflib import Differ
-from typing import List, Dict, Any
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.prompts import PromptTemplate
-from langchain_core.pydantic_v1 import BaseModel, Field
-from prompt import analyze_resume_prompt, update_skill_prompt, update_experience_prompt, update_project_prompt, generate_project_prompt
+from utils import *
 
 st.set_page_config(layout="wide")
-
-class Resume(BaseModel):
-    skills: Dict[str, List[str]] = Field(description='Dictionary of tech skills with categories as keys and lists of skills as values')
-    experiences: List[Dict[str, Any]] = Field(description='List of work experience entries')
-    projects: List[Dict[str, Any]] = Field(description='List of project entries')
-
-class Skill(BaseModel):
-    skills: Dict[str, List[str]] = Field(description='Dictionary of tech skills with categories as keys and lists of skills as values')
-
-class Experience(BaseModel):
-    company: str = Field(description="Name of the company")
-    role: str = Field(description="Role in the company")
-    details: List[str] = Field(description="List of details about the work experience")
-
-class Project(BaseModel):
-    name: str = Field(description="Name of the project")
-    technologies: List[str] = Field(description="List of technologies used in the project")
-    details: List[str] = Field(description="List of details about the project")
-
-# Highlight changes function
-def highlight_changes(original, new):
-    def dict_to_str(d):
-        if isinstance(d, dict):
-            return json.dumps(d, indent=2)
-        elif isinstance(d, list):
-            return json.dumps(d, indent=2)
-        return str(d)
-
-    original_str = dict_to_str(original)
-    new_str = dict_to_str(new)
-    d = Differ()
-    diff = d.compare(original_str.splitlines(), new_str.splitlines())
-    highlighted = ''
-    for line in diff:
-        if line.startswith('+ '):
-            highlighted += f'<span style="color: green; background-color: #e6ffe6">{line[2:]}</span><br>'
-        elif line.startswith('- '):
-            highlighted += f'<span style="color: red; background-color: #ffe6e6">{line[2:]}</span><br>'
-        else:
-            highlighted += f'{line[2:]}<br>'
-    return highlighted
-
-def skills_dict_to_string(skills_dict):
-    skills_str = ''
-    for category, skills in skills_dict.items():
-        skills_str += f'{category}: {", ".join(skills)}\n'
-    return skills_str.strip()
-
-def experiences_list_to_string(experiences_list):
-    experiences_str = ""
-    for experience in experiences_list:
-        company = experience.get('company', '')
-        role = experience.get('role', '')
-        details = experience.get('details', [])
-        details_str = "\n    ".join(details)
-        experiences_str += f"Company: {company}\nRole: {role}\nDetails:\n    {details_str}\n\n"
-    return experiences_str.strip()
-
-def projects_list_to_string(projects_list):
-    projects_str = ""
-    for project in projects_list:
-        name = project.get('name', '')
-        technologies = project.get('technologies', [])
-        details = project.get('details', [])
-        technologies_str = ", ".join(technologies)
-        details_str = "\n    ".join(details)
-        projects_str += f"Project Name: {name}\nTechnologies: {technologies_str}\nDetails:\n    {details_str}\n\n"
-    return projects_str.strip()
-
-def analyze_resume(resume_text):
-    if not st.session_state.get('openai_api_key'):
-        st.error('Please enter your OpenAI API key.')
-        return
-    if not resume_text:
-        st.error('Please provide your resume.')
-        return
-
-    model = ChatOpenAI(model_name='gpt-4', openai_api_key=st.session_state.openai_api_key, streaming=True)
-    parser = JsonOutputParser(pydantic_object=Resume)
-    prompt = PromptTemplate(
-        template='{format_instructions}\n{query}\n',
-        input_variables=['query'],
-        partial_variables={'format_instructions': parser.get_format_instructions()},
-    )
-    chain = prompt | model | parser
-    response = chain.invoke({'query': 'given resume_text:\n' + resume_text + '\n' + analyze_resume_prompt})
-    return response
-
-def update_section(section_name, original_data, update_prompt, pydantic_object, data_to_string_func, tab_index):
-    if section_name != 'Genprojects':
-        st.subheader(f'Original {section_name}', divider='rainbow')
-        original_data_str = data_to_string_func(original_data)
-        st.text(original_data_str)
-    else:
-        original_data_str = ""
-
-    st.subheader('Default Prompt', divider='rainbow')
-    prompt_text = st.text_area('You can update the prompt based on your requirements', update_prompt, height=300)
-
-    if st.button(f'Update {section_name}', use_container_width=True):
-        st.session_state.active_tab = tab_index  # Set the active tab in the session state
-        if not st.session_state.get('openai_api_key'):
-            st.error('Please enter your OpenAI API key.')
-            return
-
-        with st.spinner(f'Updating {section_name} based on job description...'):
-            model = ChatOpenAI(model_name='gpt-4', openai_api_key=st.session_state.openai_api_key, streaming=True)
-            parser = JsonOutputParser(pydantic_object=pydantic_object)
-            prompt = PromptTemplate(
-                template='{format_instructions}\n{query}\n',
-                input_variables=['query'],
-                partial_variables={'format_instructions': parser.get_format_instructions()},
-            )
-            chain = prompt | model | parser
-            response = chain.invoke(
-                {'query': f'given original {section_name.lower()}:\n' + original_data_str + '\nand job description:\n' + st.session_state.job_description + '\n' + prompt_text})
-            if response:
-                new_data = response.get(section_name.lower(), {})
-                new_data_str = data_to_string_func(new_data) if data_to_string_func else projects_list_to_string(new_data)
-                highlighted_data = highlight_changes(original_data_str, new_data_str)
-                # Store results in session state
-                st.session_state[f'{section_name.lower()}_new_data'] = new_data_str
-                st.session_state[f'{section_name.lower()}_highlighted_data'] = highlighted_data
-
-def display_results(section_name):
-    new_data_key = f'{section_name.lower()}_new_data'
-    highlighted_data_key = f'{section_name.lower()}_highlighted_data'
-    if new_data_key in st.session_state and highlighted_data_key in st.session_state:
-        st.subheader('Compare the differences', divider='rainbow')
-        st.markdown(st.session_state[highlighted_data_key], unsafe_allow_html=True)
-        st.subheader(f'New {section_name}', divider='rainbow')
-        st.text(st.session_state[new_data_key])
-        st.success(f'Update {section_name.lower()} successfully!')
-
-def invoke_chain(query, pydantic_object):
-    if not st.session_state.get('openai_api_key'):
-        st.error('Please enter your OpenAI API key.')
-        return
-
-    model = ChatOpenAI(model_name='gpt-4', openai_api_key=st.session_state.openai_api_key, streaming=True)
-    parser = JsonOutputParser(pydantic_object=pydantic_object)
-    prompt = PromptTemplate(
-        template='{format_instructions}\n{query}\n',
-        input_variables=['query'],
-        partial_variables={'format_instructions': parser.get_format_instructions()},
-    )
-    chain = prompt | model | parser
-    return chain.invoke({'query': query})
 
 with st.sidebar:
     openai_api_key = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
     "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
     st.session_state.openai_api_key = openai_api_key
+    # Add model selection in the sidebar
+    model_options = ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo']
+    selected_model = st.sidebar.selectbox('Select a model', model_options, index=0)
+    st.session_state['selected_model'] = selected_model
 
 st.header('AI Coach: Resume customization', divider='violet')
 st.caption('created by Education Victory')
@@ -172,13 +20,24 @@ st.caption('created by Education Victory')
 for key, default_value in {
     'resume_analyzed': False,
     'resume_response': None,
+    'company_product': None,
     'job_description': "",
     'active_tab': 0
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default_value
 
-st.write('Job Description')
+# Input for Company Name
+st.write('Company Name (required)')
+st.session_state.company_name = st.text_input(
+    'Enter company name:',
+    value=st.session_state.get('company_name', ''),  # Use the session state value if it exists
+    max_chars=100,
+    placeholder='Enter company name here...',
+    label_visibility='collapsed'
+)
+
+st.write('Job Description (required)')
 st.session_state.job_description = st.text_area(
     'Paste job description text:',
     value=st.session_state.job_description,  # Use the session state value if it exists
@@ -206,13 +65,23 @@ else:
 
 # Button to analyze resume
 if not st.session_state.resume_analyzed:
-    if st.button('Analyze Resume', use_container_width=True):
-        with st.spinner('Analyzing resume...'):
+    if st.button('Analyze Resume and Company', use_container_width=True):
+        with st.spinner('Analyzing resume and company...'):
             resume_response = analyze_resume(resume_text)
             if resume_response:
                 st.session_state.resume_analyzed = True
                 st.session_state.resume_response = resume_response
                 st.success('Resume analyzed successfully!')
+            else:
+                st.error("Failed to analyze your resume. Please try again.")
+            company_product = get_company_product(st.session_state.company_name)
+            if company_product:
+                products_list = company_product['products']
+                formatted_products = "\n\n".join(products_list)
+                st.session_state['company_product'] = formatted_products
+                st.success('Company product information retrieved successfully!')
+            else:
+                st.error("Failed to get company product information. Please try again.")
 
 if st.session_state.resume_analyzed:
     st.header('Edit and Update', divider='violet')
