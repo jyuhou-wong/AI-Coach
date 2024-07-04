@@ -29,6 +29,7 @@ for key, default_value in {
 
 # Input for Company Name
 st.write('Company Name (required)')
+st.info('We will use the company\'s product to generate new projects')
 st.session_state.company_name = st.text_input(
     'Enter company name:',
     value=st.session_state.get('company_name', ''),  # Use the session state value if it exists
@@ -38,6 +39,7 @@ st.session_state.company_name = st.text_input(
 )
 
 st.write('Job Description (required)')
+st.info('When applying for a different job, don\'t refresh the page, paste the new job description here.')
 st.session_state.job_description = st.text_area(
     'Paste job description text:',
     value=st.session_state.job_description,  # Use the session state value if it exists

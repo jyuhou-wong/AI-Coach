@@ -116,6 +116,9 @@ def analyze_resume(resume_text):
     if not resume_text:
         st.error('Please provide your resume.')
         return
+    if not st.session_state.company_name:
+        st.error('Please provide the company name.')
+        return
 
     selected_model = st.session_state.get('selected_model', 'gpt-4')
     model = ChatOpenAI(model_name=selected_model, openai_api_key=st.session_state.openai_api_key, streaming=True)
