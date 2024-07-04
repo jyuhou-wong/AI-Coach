@@ -189,6 +189,7 @@ def display_results(section_name):
         st.subheader(f'New {section_name}', divider='rainbow')
         st.text(st.session_state[new_data_key])
         st.info(f'Update {section_name.lower()} successfully! You can click the button again to regenerate different versions.')
+        st.warning('You can also paste another Job Description and generate new result.')
 
 def invoke_chain(query, pydantic_object):
     if not st.session_state.get('openai_api_key'):

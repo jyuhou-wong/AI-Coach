@@ -36,7 +36,7 @@ Output format:
 
 update_skill_prompt = """Requirements:
 1. The updated tech skill should contain no more than 4 sections, which can only be: Programming Languages, Frameworks and Tools, Databases, and Cloud Services (Choose from AWS, GCP, Azure, Oracle Cloud).
-2. Every section should have 4 to 6 skills
+2. Every section should have 4 to 8 skills
 3. Ensure that all important skills mentioned in the job description are included in the relevant sections.
 4. Format the output as JSON objects for each tech skill section with sections containing lists of items.
 5. Do not include a section in the output if it has no items.
