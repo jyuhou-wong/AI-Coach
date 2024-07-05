@@ -34,23 +34,27 @@ Output format:
 }
 """
 
-update_skill_prompt = """Requirements:
-1. The updated tech skill should contain no more than 4 sections, which can only be: Programming Languages, Frameworks and Tools, Databases, and Cloud Services (Choose from AWS, GCP, Azure, Oracle Cloud).
-2. Every section should have 4 to 8 skills
-3. Ensure that all important skills mentioned in the job description are included in the relevant sections.
-4. Format the output as JSON objects for each tech skill section with sections containing lists of items.
-5. Do not include a section in the output if it has no items.
-6. Do not delete important skills or certifications.
+update_skill_prompt = """
+Requirements:
+1. The updated tech skills should be categorized into no more than 5 sections: Programming Languages, Frameworks and Tools, Databases, Cloud Services (choose from AWS, GCP, Azure, Oracle Cloud) and Others (Protocol, Design Pattern, CI/CD, ).
+2. Ensure all important skills mentioned in the job description are included in the relevant sections.
+3. Format the output as JSON objects, with each section containing a list of items.
+4. Do not include a section in the output if it has no items.
 
 Action:
-1. Rewrite the tech skills in the resume based on the requirements in the job description. Here is an example output:
+1. Extract all tech skills from the resume and job description.
+2. Classify the extracted skills into one of the following sections: Programming Languages, Frameworks and Tools, Databases, and Cloud Services (choose from cloud certification, AWS, GCP, Azure, Oracle Cloud).
+3. Reorder each section, prioritize the tech skills mentioned in the job description, and group related skills together (e.g., front-end frameworks).
+4. Keep all the cloud certifications (AWS Certified Solutions Architect ), Keep only the first six skills in each section.
 
+Example output:
 {
   "skills": {
     "Programming Languages": ["Java", "Python", ...],
     "Frameworks and Tools": ["Spring", "Kubernetes", ...],
     "Databases": ["MySQL", ...],
-    "Cloud Services": ["AWS EC2", "AWS S3", ...]
+    "Cloud Services": ["AWS (EC2, S3)", ...],
+    "Others": ["RESTful", ...]
   }
 }
 """

@@ -39,7 +39,7 @@ st.session_state.company_name = st.text_input(
 )
 
 st.write('Job Description (required)')
-st.info('When applying for a different job, don\'t refresh the page, paste the new job description here.')
+st.info('Paste the new job description here when applying for another job.')
 st.session_state.job_description = st.text_area(
     'Paste job description text:',
     value=st.session_state.job_description,  # Use the session state value if it exists
@@ -63,7 +63,7 @@ if not st.session_state.resume_analyzed:
             except Exception as e:
                 st.error(f"Error extracting text from PDF: {e}")
 else:
-    st.caption('Your resume has :blue[already] been analyzed. You can paste :blue[another] job description and then run the update again')
+    st.caption('Your resume has :blue[already] been analyzed. You can paste :blue[another] job description to generate data for another job')
 
 # Button to analyze resume
 if not st.session_state.resume_analyzed:
