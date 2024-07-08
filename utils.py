@@ -99,7 +99,7 @@ def get_company_product(company_name):
         input_variables=['query'],
         partial_variables={'format_instructions': parser.get_format_instructions()},
     )
-    query = f"Can you provide an overview of the main products and services offered by {company_name}? Please include details about their core features, target audience, and how these products serve the needs of professionals and businesses."
+    query = f"Can you provide an overview of the main products and services offered by {company_name}? Please include details about their core features, target audience, and how these products serve the needs of professionals and businesses. If you don't know the {company_name}, just return an empty response"
     chain = prompt | model | parser
     response = chain.invoke({'query': query})
     # Validate JSON response
@@ -115,9 +115,6 @@ def analyze_resume(resume_text):
         return
     if not resume_text:
         st.error('Please provide your resume.')
-        return
-    if not st.session_state.company_name:
-        st.error('Please provide the company name.')
         return
 
     selected_model = st.session_state.get('selected_model', 'gpt-4')
@@ -137,28 +134,23 @@ def analyze_resume(resume_text):
             return
     return response
 
-def update_section(section_name, original_data, update_prompt, pydantic_object, data_to_string_func, tab_index):
-    if section_name != 'Genprojects':
-        st.subheader(f'Original {section_name}', divider='rainbow')
-        original_data_str = data_to_string_func(original_data)
-        st.text(original_data_str)
-    else:
-        original_data_str = ""
-
-    st.subheader('Default Prompt', divider='rainbow')
-
-    if section_name == 'Genprojects' and 'company_product' in st.session_state:
-        update_prompt = 'Company Product: ' + st.session_state['company_product'] + '\n\n' + update_prompt
-
-    prompt_text = st.text_area('You can update the prompt based on your requirements', update_prompt, height=300)
-
+def update_section(section_name, company_name, job_description, original_data_str, update_prompt, pydantic_object, data_to_string_func, tab_index):
+    if section_name == 'Genprojects':
+        company_product = get_company_product(company_name)
+        if company_product:
+            products_list = company_product['products']
+            formatted_products = "\n\n".join(products_list)
+        else:
+            formatted_products = ''
+        update_prompt = 'Company Product: ' + formatted_products + '\n\n' + update_prompt
+    prompt_text = update_prompt
     if st.button(f'Update {section_name}', use_container_width=True):
         st.session_state.active_tab = tab_index  # Set the active tab in the session state
         if not st.session_state.get('openai_api_key'):
             st.error('Please enter your OpenAI API key.')
             return
 
-        with st.spinner(f'Updating {section_name} based on job description...'):
+        with st.spinner(f'Updating {section_name}...'):
             selected_model = st.session_state.get('selected_model', 'gpt-4')
             model = ChatOpenAI(model_name=selected_model, openai_api_key=st.session_state.openai_api_key, streaming=True)
             parser = JsonOutputParser(pydantic_object=pydantic_object)
@@ -169,7 +161,7 @@ def update_section(section_name, original_data, update_prompt, pydantic_object, 
             )
             chain = prompt | model | parser
             response = chain.invoke(
-                {'query': f'given original {section_name.lower()}:\n' + original_data_str + '\nand job description:\n' + st.session_state.job_description + '\n' + prompt_text})
+                {'query': f'given original {section_name.lower()}:\n' + original_data_str + '\nand job description:\n' + job_description + '\n' + prompt_text})
             # Validate JSON response
             if response:
                 response_str = json.dumps(response)

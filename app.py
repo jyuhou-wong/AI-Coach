@@ -20,90 +20,98 @@ st.caption('created by Education Victory')
 for key, default_value in {
     'resume_analyzed': False,
     'resume_response': None,
-    'company_product': None,
+    'company_name': "",
     'job_description': "",
     'active_tab': 0
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default_value
 
+
+
+resume_text = ''
+st.subheader('1. Upload and Analyze Resume')
+file = st.file_uploader('Please upload your resume with PDF format.', type=['pdf'], disabled=st.session_state.resume_analyzed)
+if file is not None:
+    with st.spinner('Extracting file text...'):
+        try:
+            # Open the uploaded PDF file
+            with fitz.open(stream=file.read(), filetype='pdf') as pdf_document:
+                for page_num in range(len(pdf_document)):
+                    page = pdf_document.load_page(page_num)
+                    resume_text += page.get_text()
+        except Exception as e:
+            st.error(f"Error extracting text from PDF: {e}")
+
+if st.button('Analyze Resume', use_container_width=True, type='primary', disabled=st.session_state.resume_analyzed):
+    with st.spinner('Analyzing resume...'):
+        resume_response = analyze_resume(resume_text)
+        if resume_response:
+            st.session_state.resume_analyzed = True
+            st.session_state.resume_response = resume_response
+            st.rerun()
+        else:
+            st.error("Failed to analyze your resume. Please try again.")
+
+if st.session_state.resume_analyzed:
+    st.success('Resume analyzed successfully!')
+
+st.write('')
+
+st.subheader('2. Company name and Job description')
 # Input for Company Name
 st.write('Company Name (required)')
-st.info('We will use the company\'s product to generate new projects')
 st.session_state.company_name = st.text_input(
     'Enter company name:',
     value=st.session_state.get('company_name', ''),  # Use the session state value if it exists
     max_chars=100,
     placeholder='Enter company name here...',
-    label_visibility='collapsed'
+    label_visibility='collapsed',
+    disabled=not st.session_state.resume_analyzed
 )
+st.info('We will generate new projects based on the products of the company')
 
 st.write('Job Description (required)')
-st.info('Paste the new job description here when applying for another job.')
 st.session_state.job_description = st.text_area(
     'Paste job description text:',
     value=st.session_state.job_description,  # Use the session state value if it exists
     max_chars=8500,
     height=300,
     placeholder='Paste job description text here...',
-    label_visibility='collapsed'
+    label_visibility='collapsed',
+    disabled=not st.session_state.resume_analyzed
 )
-
-resume_text = ''
-if not st.session_state.resume_analyzed:
-    file = st.file_uploader('Please upload your resume with PDF format.', type=['pdf'])
-    if file is not None:
-        with st.spinner('Extracting file text...'):
-            try:
-                # Open the uploaded PDF file
-                with fitz.open(stream=file.read(), filetype='pdf') as pdf_document:
-                    for page_num in range(len(pdf_document)):
-                        page = pdf_document.load_page(page_num)
-                        resume_text += page.get_text()
-            except Exception as e:
-                st.error(f"Error extracting text from PDF: {e}")
-else:
-    st.caption('Your resume has :blue[already] been analyzed. You can paste :blue[another] job description to generate data for another job')
-
-# Button to analyze resume
-if not st.session_state.resume_analyzed:
-    if st.button('Analyze Resume and Company', use_container_width=True):
-        with st.spinner('Analyzing resume and company...'):
-            resume_response = analyze_resume(resume_text)
-            if resume_response:
-                st.session_state.resume_analyzed = True
-                st.session_state.resume_response = resume_response
-                st.success('Resume analyzed successfully!')
-            else:
-                st.error("Failed to analyze your resume. Please try again.")
-            company_product = get_company_product(st.session_state.company_name)
-            if company_product:
-                products_list = company_product['products']
-                formatted_products = "\n\n".join(products_list)
-                st.session_state['company_product'] = formatted_products
-                st.success('Company product information retrieved successfully!')
-            else:
-                st.error("Failed to get company product information. Please try again.")
+st.info('Change the job description when applying for another job.')
 
 if st.session_state.resume_analyzed:
-    st.header('Edit and Update', divider='violet')
+    st.header('3. Resume customization', divider='violet')
     active_tab = st.session_state.active_tab
     tabs = st.tabs(['Skills', 'Experiences', 'Projects', 'Generate Projects'])
-
     tab_details = [
         ('Skills', 'skills', update_skill_prompt, Skill, skills_dict_to_string),
         ('Experiences', 'experiences', update_experience_prompt, Experience, experiences_list_to_string),
         ('Projects', 'projects', update_project_prompt, Project, projects_list_to_string),
         ('Genprojects', None, generate_project_prompt, Project, None)
     ]
-
-    for i, (section_name, section_key, update_prompt, pydantic_object, data_to_string_func) in enumerate(tab_details):
-        with tabs[i]:
-            if active_tab == i:
-                st.session_state.active_tab = i
-            resume_response = st.session_state.resume_response
-            original_data = resume_response.get(section_key, {}) if section_key else {}
-            update_section(section_name, original_data, update_prompt, pydantic_object, data_to_string_func, i)
-            display_results(section_name)
+    if not st.session_state.job_description or not st.session_state.company_name:
+        st.error('Please provide company name and job description.')
+    else:
+        for i, (section_name, section_key, update_prompt, pydantic_object, data_to_string_func) in enumerate(tab_details):
+            with tabs[i]:
+                if active_tab == i:
+                    st.session_state.active_tab = i
+                resume_response = st.session_state.resume_response
+                original_data = resume_response.get(section_key, {}) if section_key else {}
+                if section_name != 'Genprojects':
+                    st.subheader(f'Original {section_name}', divider='rainbow')
+                    original_data_str = data_to_string_func(original_data)
+                    st.text(original_data_str)
+                else:
+                    original_data_str = ""
+                st.subheader('Default Prompt', divider='rainbow')
+                prompt_text = st.text_area('You can update the prompt based on your requirements', update_prompt, height=300)
+                original_data = resume_response.get(section_key, {}) if section_key else {}
+                update_section(section_name, st.session_state.company_name, st.session_state.job_description, original_data_str, prompt_text, pydantic_object, data_to_string_func, i)
+                display_results(section_name)
 else:
-    st.info('Please analyze your resume first to enable the tabs.')
+    st.warning('Please analyze resume before resume customization.')
