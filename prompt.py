@@ -119,7 +119,7 @@ Review:
 
 generate_project_prompt = """Requirements:
 1. Use a professional and concise style.
-2. Every project should have 3 bullet points, each bullet point should include at least one tech skill.
+2. Every project should have 5 bullet points, each bullet point should include at least one tech skill.
 3. Generate bullet points that describe [your accomplishment or task], using [specific method or technology], and highlight [specific outcome or benefit, including any quantifiable improvements].
 4. These projects should have a certain degree of differentiation, and each can meet the specific requirements of the position.
 5. The project name should be creative and not too common, using the tech stack list in the job description.
