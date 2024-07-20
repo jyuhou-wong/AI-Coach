@@ -10,8 +10,14 @@ from prompt import *
 
 class Resume(BaseModel):
     skills: Dict[str, List[str]] = Field(description='Dictionary of tech skills with categories as keys and lists of skills as values')
+    skills_original: str = Field(description='Original text for skills section')
     experiences: List[Dict[str, Any]] = Field(description='List of work experience entries')
+    experiences_original: str = Field(description='Original text for experiences section')
     projects: List[Dict[str, Any]] = Field(description='List of project entries')
+    projects_original: str = Field(description='Original text for projects section')
+
+class Format(BaseModel):
+    text: str = Field(description='New test with original format')
 
 class Skill(BaseModel):
     skills: Dict[str, List[str]] = Field(description='Dictionary of tech skills with categories as keys and lists of skills as values')
@@ -101,10 +107,9 @@ def get_company_product(company_name):
     )
     query = f"Can you provide an overview of the main products and services offered by {company_name}? Please include details about their core features, target audience, and how these products serve the needs of professionals and businesses. If you don't know the {company_name}, just return an empty response"
     chain = prompt | model | parser
-    response = chain.invoke({'query': query})
-    # Validate JSON response
-    response_str = json.dumps(response)
-    if not is_valid_json(response_str):
+    try:
+        response = chain.invoke({'query': query})
+    except:
         st.error(f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again.")
         return
     return response
@@ -126,12 +131,11 @@ def analyze_resume(resume_text):
         partial_variables={'format_instructions': parser.get_format_instructions()},
     )
     chain = prompt | model | parser
-    response = chain.invoke({'query': 'given resume_text:\n' + resume_text + '\n' + analyze_resume_prompt})
-    if response:
-        response_str = json.dumps(response)
-        if not is_valid_json(response_str):
-            st.error(f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again.")
-            return
+    try:
+        response = chain.invoke({'query': 'given resume_text:\n' + resume_text + '\n' + analyze_resume_prompt})
+    except:
+        st.error(f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again.")
+        return
     return response
 
 def update_section(section_name, company_name, job_description, original_data_str, update_prompt, pydantic_object, data_to_string_func, tab_index):
@@ -144,36 +148,35 @@ def update_section(section_name, company_name, job_description, original_data_st
             formatted_products = ''
         update_prompt = 'Company Product: ' + formatted_products + '\n\n' + update_prompt
     prompt_text = update_prompt
-    if st.button(f'Update {section_name}', use_container_width=True):
+    if st.button(f'Update {section_name}', type="primary", use_container_width=True):
+        if not st.session_state.job_description or not st.session_state.company_name:
+            st.error('Please provide company name and job description.')
+            return
         st.session_state.active_tab = tab_index  # Set the active tab in the session state
         if not st.session_state.get('openai_api_key'):
             st.error('Please enter your OpenAI API key.')
             return
 
-        with st.spinner(f'Updating {section_name}...'):
-            selected_model = st.session_state.get('selected_model', 'gpt-4')
-            model = ChatOpenAI(model_name=selected_model, openai_api_key=st.session_state.openai_api_key, streaming=True)
-            parser = JsonOutputParser(pydantic_object=pydantic_object)
-            prompt = PromptTemplate(
-                template='{format_instructions}\n{query}\n',
-                input_variables=['query'],
-                partial_variables={'format_instructions': parser.get_format_instructions()},
-            )
-            chain = prompt | model | parser
-            response = chain.invoke(
-                {'query': f'given original {section_name.lower()}:\n' + original_data_str + '\nand job description:\n' + job_description + '\n' + prompt_text})
-            # Validate JSON response
-            if response:
-                response_str = json.dumps(response)
-                if not is_valid_json(response_str):
-                    st.error(f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again.")
-                    return
-                new_data = response.get(section_name.lower(), {})
-                new_data_str = data_to_string_func(new_data) if data_to_string_func else projects_list_to_string(new_data)
-                highlighted_data = highlight_changes(original_data_str, new_data_str)
-                # Store results in session state
-                st.session_state[f'{section_name.lower()}_new_data'] = new_data_str
-                st.session_state[f'{section_name.lower()}_highlighted_data'] = highlighted_data
+        selected_model = st.session_state.get('selected_model', 'gpt-4')
+        model = ChatOpenAI(model_name=selected_model, openai_api_key=st.session_state.openai_api_key, streaming=True)
+        parser = JsonOutputParser(pydantic_object=pydantic_object)
+        prompt = PromptTemplate(
+            template='{format_instructions}\n{query}\n',
+            input_variables=['query'],
+            partial_variables={'format_instructions': parser.get_format_instructions()},
+        )
+        chain = prompt | model | parser
+        try:
+            response = chain.invoke({'query': f'given original {section_name.lower()}:\n' + original_data_str + '\nand job description:\n' + job_description + '\n' + prompt_text})
+        except:
+            st.error(f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again.")
+            return
+        new_data = response.get(section_name.lower(), {})
+        new_data_str = data_to_string_func(new_data) if data_to_string_func else projects_list_to_string(new_data)
+        highlighted_data = highlight_changes(original_data_str, new_data_str)
+        # Store results in session state
+        st.session_state[f'{section_name.lower()}_new_data'] = new_data_str
+        st.session_state[f'{section_name.lower()}_highlighted_data'] = highlighted_data
 
 def display_results(section_name):
     new_data_key = f'{section_name.lower()}_new_data'
@@ -183,8 +186,52 @@ def display_results(section_name):
         st.markdown(st.session_state[highlighted_data_key], unsafe_allow_html=True)
         st.subheader(f'New {section_name}', divider='rainbow')
         st.text(st.session_state[new_data_key])
-        st.info(f'Update {section_name.lower()} successfully! You can click the button again to regenerate different versions.')
-        st.warning('You can also paste another Job Description and generate new result.')
+
+def display_format(section_name):
+    # Get the original and new data from session state
+    new_data_key = f'{section_name.lower()}_new_data'
+    if section_name == 'Genprojects':
+        original_data_key = 'projects_original'
+    else:
+        original_data_key = f'{section_name.lower()}_original'
+    if new_data_key in st.session_state:
+        original_data = st.session_state.resume_response[original_data_key]
+        new_data = st.session_state.get(f'{section_name.lower()}_new_data', '')
+
+        selected_model = st.session_state.get('selected_model', 'gpt-4')
+        model = ChatOpenAI(model_name=selected_model, openai_api_key=st.session_state.openai_api_key, streaming=True)
+        parser = JsonOutputParser(pydantic_object=Format)
+        prompt = PromptTemplate(
+            template='{format_instructions}\n{query}\n',
+            input_variables=['query'],
+            partial_variables={'format_instructions': parser.get_format_instructions()},
+        )
+        chain = prompt | model | parser
+
+        # Prepare the query
+        query = f"""
+        Here is the original resume content:
+        {original_data}
+
+        Here is the new content for the {section_name} section:
+        {new_data}
+
+        Generate a text that corresponds to the original resume format using the new content. Looks like
+        {{"text": ...}}
+        """
+        # Call LangChain with the prompt
+        try:
+            response = chain.invoke({'query': query})
+        except:
+            st.error(f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again.")
+            return
+        response_str = json.dumps(response['text'])
+        formatted_text = response_str.replace('\\n', '\n').replace('\\\\', '\\')
+        formatted_text = formatted_text.strip('"')
+        st.subheader('Formatted New ' + section_name, divider='rainbow')
+        st.text_area('Formatted Text', formatted_text, height=200)
+        st.success(f'Update {section_name.lower()} successfully! You can click the button again to regenerate different versions.')
+        st.info('You can also paste another Job Description and generate new result.')
 
 def invoke_chain(query, pydantic_object):
     if not st.session_state.get('openai_api_key'):
@@ -200,10 +247,9 @@ def invoke_chain(query, pydantic_object):
         partial_variables={'format_instructions': parser.get_format_instructions()},
     )
     chain = prompt | model | parser
-    response = chain.invoke({'query': query})
-    if response:
-        response_str = json.dumps(response)
-        if not is_valid_json(response_str):
-            st.error(f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again.")
-            return
-        return response
+    try:
+        response = chain.invoke({'query': query})
+    except:
+        st.error(f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again.")
+        return
+    return response

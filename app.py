@@ -1,6 +1,9 @@
+import re
 import fitz
 import streamlit as st
 from utils import *
+from docx import Document
+from pylatexenc.latex2text import LatexNodes2Text
 
 st.set_page_config(layout="wide")
 
@@ -21,31 +24,42 @@ for key, default_value in {
     'resume_analyzed': False,
     'resume_response': None,
     'company_name': "",
+    'resume_text': '',
     'job_description': "",
+    'file_type': "",
     'active_tab': 0
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default_value
 
-
-
-resume_text = ''
 st.subheader('1. Upload and Analyze Resume')
-file = st.file_uploader('Please upload your resume with PDF format.', type=['pdf'], disabled=st.session_state.resume_analyzed)
-if file is not None:
+file = st.file_uploader('Please upload your resume in PDF, DOCX, or LaTeX format.', type=['pdf', 'docx', 'tex'], disabled=st.session_state.resume_analyzed)
+if file:
     with st.spinner('Extracting file text...'):
         try:
-            # Open the uploaded PDF file
-            with fitz.open(stream=file.read(), filetype='pdf') as pdf_document:
-                for page_num in range(len(pdf_document)):
-                    page = pdf_document.load_page(page_num)
-                    resume_text += page.get_text()
+            if file.type == 'application/pdf':
+                # Open the uploaded PDF file
+                with fitz.open(stream=file.read(), filetype='pdf') as pdf_document:
+                    for page_num in range(len(pdf_document)):
+                        page = pdf_document.load_page(page_num)
+                        st.session_state.resume_text += page.get_text()
+                    st.session_state.file_type = 'PDF'
+            elif file.type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                # Open the uploaded DOCX file
+                doc = Document(file)
+                for para in doc.paragraphs:
+                    st.session_state.resume_text += para.text + '\n'
+                st.session_state.file_type = 'DOC'
+            elif file.type == 'application/x-tex' or (file.type == 'application/octet-stream' and file.name.endswith('.tex')):
+                # Open the uploaded LaTeX file
+                st.session_state.resume_text = file.read().decode('utf-8')
+                st.session_state.file_type = 'Latex'
         except Exception as e:
-            st.error(f"Error extracting text from PDF: {e}")
+            st.error(f"Error extracting text from file: {e}")
 
 if st.button('Analyze Resume', use_container_width=True, type='primary', disabled=st.session_state.resume_analyzed):
     with st.spinner('Analyzing resume...'):
-        resume_response = analyze_resume(resume_text)
+        resume_response = analyze_resume(st.session_state.resume_text)
         if resume_response:
             st.session_state.resume_analyzed = True
             st.session_state.resume_response = resume_response
@@ -55,10 +69,22 @@ if st.button('Analyze Resume', use_container_width=True, type='primary', disable
 
 if st.session_state.resume_analyzed:
     st.success('Resume analyzed successfully!')
+    tabs = st.tabs(['Skills', 'Experiences', 'Projects'])
+    tab_details = [
+        ('Skills', 'skills', skills_dict_to_string),
+        ('Experiences', 'experiences', experiences_list_to_string),
+        ('Projects', 'projects', projects_list_to_string),
+    ]
+    for i, (section_name, section_key, data_to_string_func) in enumerate(tab_details):
+        with tabs[i]:
+            original_data = st.session_state.resume_response.get(section_key, {}) if section_key else {}
+            st.subheader(f'{section_name}', divider='rainbow')
+            original_data_str = data_to_string_func(original_data)
+            st.text(original_data_str)
 
 st.write('')
 
-st.subheader('2. Company name and Job description')
+st.subheader('2. Enter company name and job description')
 # Input for Company Name
 st.write('Company Name (required)')
 st.session_state.company_name = st.text_input(
@@ -75,13 +101,12 @@ st.write('Job Description (required)')
 st.session_state.job_description = st.text_area(
     'Paste job description text:',
     value=st.session_state.job_description,  # Use the session state value if it exists
-    max_chars=8500,
+    max_chars=12000,
     height=300,
     placeholder='Paste job description text here...',
     label_visibility='collapsed',
     disabled=not st.session_state.resume_analyzed
 )
-st.info('Change the job description when applying for another job.')
 
 if st.session_state.resume_analyzed:
     st.header('3. Resume customization', divider='violet')
@@ -93,25 +118,23 @@ if st.session_state.resume_analyzed:
         ('Projects', 'projects', update_project_prompt, Project, projects_list_to_string),
         ('Genprojects', None, generate_project_prompt, Project, None)
     ]
-    if not st.session_state.job_description or not st.session_state.company_name:
-        st.error('Please provide company name and job description.')
-    else:
-        for i, (section_name, section_key, update_prompt, pydantic_object, data_to_string_func) in enumerate(tab_details):
-            with tabs[i]:
-                if active_tab == i:
-                    st.session_state.active_tab = i
-                resume_response = st.session_state.resume_response
-                original_data = resume_response.get(section_key, {}) if section_key else {}
-                if section_name != 'Genprojects':
-                    st.subheader(f'Original {section_name}', divider='rainbow')
-                    original_data_str = data_to_string_func(original_data)
-                    st.text(original_data_str)
-                else:
-                    original_data_str = ""
-                st.subheader('Default Prompt', divider='rainbow')
-                prompt_text = st.text_area('You can update the prompt based on your requirements', update_prompt, height=300)
-                original_data = resume_response.get(section_key, {}) if section_key else {}
+    for i, (section_name, section_key, update_prompt, pydantic_object, data_to_string_func) in enumerate(tab_details):
+        with tabs[i]:
+            if active_tab == i:
+                st.session_state.active_tab = i
+            resume_response = st.session_state.resume_response
+            original_data = resume_response.get(section_key, {}) if section_key else {}
+            st.subheader('Default Prompt', divider='rainbow')
+            prompt_text = st.text_area('You can update the prompt based on your requirements', update_prompt, height=300)
+            original_data = resume_response.get(section_key, {}) if section_key else {}
+            if section_name != 'Genprojects':
+                original_data_str = data_to_string_func(original_data)
+            else:
+                original_data_str = ""
+            with st.spinner('Generating data...'):
                 update_section(section_name, st.session_state.company_name, st.session_state.job_description, original_data_str, prompt_text, pydantic_object, data_to_string_func, i)
                 display_results(section_name)
+            with st.spinner('Generateing formatted data...'):
+                display_format(section_name)
 else:
     st.warning('Please analyze resume before resume customization.')
