@@ -1,6 +1,7 @@
 analyze_resume_prompt = """Requirements:
 1. Format the output as JSON objects for each tech skill section, work experience, and project, with sections containing lists of items.
 2. Bullet points in the work experience and projects sections should be nested within lists.
+3. Include the original text for each section in the output.
 
 Action:
 1. Return three items of data: the tech skill, work experience, and projects in the resume text. Here is an example:
@@ -9,10 +10,8 @@ Output format:
 {
   "skills": {
     "Programming Languages": ["Java", "Python"],
-    "Frameworks and Tools": ["Spring", "Kubernetes"],
-    "Databases": ["MySQL"],
-    "Cloud services": ["AWS EC2", "AWS S3"]
   },
+  "skills_original": "Original text for skills section",
   "experiences": [
     {
       "company": "ABC Corp",
@@ -22,6 +21,7 @@ Output format:
       ]
     }
   ],
+  "experiences_original": "Original text for experiences section",
   "projects": [
     {
       "name": "Inventory Management System",
@@ -30,13 +30,15 @@ Output format:
         "Implemented a Vite-based build system using Django and React, reducing build times by 40% and improving overall application performance.",
       ]
     }
-  ]
+  ],
+  "projects_original": "Original text for projects section"
 }
 """
 
 update_skill_prompt = """
 Requirements:
 1. The updated tech skills should be categorized into no more than 5 sections: Programming Languages, Frameworks and Tools, Databases, Cloud Services (choose from AWS, GCP, Azure, Oracle Cloud) and Others (Protocol, Design Pattern, CI/CD, ).
+2. Each section should contain 4 to 7 skills.
 2. Ensure all important skills mentioned in the job description are included in the relevant sections.
 3. Format the output as JSON objects, with each section containing a list of items.
 4. Do not include a section in the output if it has no items.
@@ -119,7 +121,7 @@ Review:
 
 generate_project_prompt = """Requirements:
 1. Use a professional and concise style.
-2. Every project should have 5 bullet points, each bullet point should include at least one tech skill.
+2. Every project should have 4 bullet points, each bullet point should include at least one tech skill.
 3. Generate bullet points that describe [your accomplishment or task], using [specific method or technology], and highlight [specific outcome or benefit, including any quantifiable improvements].
 4. These projects should have a certain degree of differentiation, and each can meet the specific requirements of the position.
 5. The project name should be creative and not too common, using the tech stack list in the job description.
