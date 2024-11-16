@@ -178,10 +178,11 @@ def analyze_resume(resume_text):
                 + analyze_resume_prompt
             }
         )
-    except:
-        st.error(
-            f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again."
-        )
+    except Exception as error:
+        # st.error(
+        #     f"The ChatGPT response sometimes didn't return a valid JSON. Please try update again."
+        # )
+        st.error(error)
         return
     return response
 
